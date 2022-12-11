@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.inject.Provider;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Scope;
 
@@ -24,8 +26,39 @@ public class PrototypeBeanTest {
     ac.close();
   }
 
+  @Test
+  void singletonClientUsePrototype() {
+    AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(ClientBean.class,
+        ProtoTypeBean.class);
+    ClientBean clientBean1 = ac.getBean(ClientBean.class);
+    int count1 = clientBean1.logic();
+    assertThat(count1).isEqualTo(1);
+    ClientBean clientBean2 = ac.getBean(ClientBean.class);
+    int count2 = clientBean2.logic();
+    assertThat(count2).isEqualTo(1);
+  }
+
+  @Scope("singleton")
+  static class ClientBean {
+
+/*    @Autowired
+    private ObjectProvider<ProtoTypeBean> prototypeBeanProvider;*/
+
+    @Autowired
+    private Provider<ProtoTypeBean> prototypeBeanProvider;
+
+
+    public int logic() {
+      ProtoTypeBean protoTypeBean = prototypeBeanProvider.get();
+      protoTypeBean.addCount();
+      return protoTypeBean.getCount();
+    }
+  }
+
   @Scope("prototype")
   static class ProtoTypeBean {
+
+    private int count;
 
     @PostConstruct
     public void init() {
@@ -35,6 +68,18 @@ public class PrototypeBeanTest {
     @PreDestroy
     public void destroy() {
       System.out.println("PrototypeBean.destroy");
+    }
+
+    public int getCount() {
+      return count;
+    }
+
+    public void setCount(int count) {
+      this.count = count;
+    }
+
+    public void addCount() {
+      count++;
     }
   }
 }
